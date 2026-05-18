@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메이플 보스 파티 달력</title>
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --card-bg: #242432;
+            --cell-bg: #2d2d3f;
+            --text-color: #ffffff;
+            --text-muted: #9999aa;
+            --accent-color: #ffb703;
+            --border-color: #3f3f56;
+            --today-bg: #3a3225;
+            --schedule-bg: #4c3c9c;
+            --holiday-color: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 15px;
+        }
+
+        .calendar-header button {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .calendar-header button:hover {
+            background-color: var(--border-color);
+        }
+
+        #month-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        /* 화면이 작아지거나 글자가 너무 길어지면 달력이 깨지지 않고 가로 스크롤이 생기도록 감싸는 컨테이너 */
+        .calendar-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            /* [핵심] 7개 칸 모두 '가장 글자가 긴 칸'의 가로 너비에 맞춰 동일하게 확장됨 */
+            grid-template-columns: repeat(7, max-content);
+            gap: 6px;
+            background-color: var(--card-bg);
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            width: max-content; /* 내부 콘텐츠 크기에 맞게 그리드 전체 폭 설정 */
+            margin: 0 auto;
+            grid-auto-rows: 120px; /* 세로 높이는 120px로 고정 */
+        }
+
+        .day-label {
+            text-align: center;
+            font-weight: bold;
+            height: 30px;
+            line-height: 30px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border-color);
+            min-width: 130px; /* 기본 최소 가로폭 지정 */
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .day-label:nth-child(7) { color: #5bc0be; }
+        .day-label:nth-child(1) { color: var(--holiday-color); }
+
+        /* [핵심] 가로폭 고정을 풀고 내부 콘텐츠 크기에 맞추되 7개 칸이 완벽한 동등 배열을 유지 */
+        .calendar-cell {
+            background-color: var(--cell-bg);
+            height: 100%;
+            border-radius: 5px;
+            padding: 10px;
+            box-sizing: border-box;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .calendar-cell:hover {
+            border-color: var(--accent-color);
+        }
+
+        .calendar-cell.empty {
+            background-color: transparent;
+            cursor: default;
+            border: none;
+        }
+
+        .calendar-cell.today {
+            background-color: var(--today-bg);
+            border: 1px solid var(--accent-color);
+        }
+
+        .cell-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 15px; /* 날짜와 공휴일 사이 간격 */
+        }
+
+        .date-num {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .calendar-cell.sunday .date-num,
+        .calendar-cell.holiday .date-num {
+            color: var(--holiday-color);
+        }
+
+        .calendar-cell.saturday .date-num {
+            color: #5bc0be;
+        }
+
+        .holiday-label {
+            font-size: 0.7rem;
+            color: var(--holiday-color);
+            background-color: rgba(255, 107, 107, 0.15);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .schedule-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* [핵심] 글자가 길어져도 아래로 떨어지지 않고 가로로 쭉 배치되게 설정 */
+        .party-badge {
+            background-color: var(--schedule-bg);
+            font-size: 0.75rem;
+            padding: 5px 8px;
+            border-radius: 3px;
+            /* 가로 고정 및 줄바꿈 금지 */
+            white-space: nowrap; 
+            border-left: 3px solid var(--accent-color);
+            width: max-content;
+        }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--cell-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-save { background-color: var(--accent-color); color: #000; }
+        .btn-delete { background-color: #ff6b6b; color: #fff; }
+        .btn-close { background-color: #6c757d; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h1>🍁 메이플 보스 파티 달력</h1>
+    
+    <div class="calendar-header">
+        <button onclick="changeMonth(-1)">◀ 이전 달</button>
+        <div id="month-display"></div>
+        <button onclick="changeMonth(1)">다음 달 ▶</button>
+    </div>
+
+    <!-- 가로 스크롤을 지원하는 래퍼 -->
+    <div class="calendar-wrapper">
+        <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+
+    <!-- 모달창 -->
+    <div class="modal" id="schedule-modal">
+        <div class="modal-content">
+            <h3 id="modal-date-title">일정 설정</h3>
+            
+            <div class="form-group">
+                <label for="party-name">파티명 / 캐릭터명</label>
+                <input type="text" id="party-name" placeholder="예: 본캐 고정팟, 부캐 먹자">
+            </div>
+
+            <div class="form-group">
+                <label for="boss-name">목표 보스</label>
+                <input type="text" id="boss-name" placeholder="예: 하드 루시드, 카오스 벨룸">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn-delete" id="btn-delete" onclick="deleteSchedule()">삭제</button>
+                <button class="btn-close" onclick="closeModal()">취소</button>
+                <button class="btn-save" onclick="saveSchedule()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let selectedDateStr = ""; 
+        let schedules = JSON.parse(localStorage.getItem('maple-calendar-schedules')) || {};
+
+        const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+
+        function getSolarHolidays(year) {
+            const holidays = {
+                "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
+                "08-15": "광복절", "10-01": "국군의 날", "10-03": "개천절", "10-09": "한글날", "12-25": "크리스마스"
+            };
+
+            if (year === 2025) {
+                Object.assign(holidays, {"01-28":"설날", "01-29":"설날", "01-30":"설날", "05-05":"석가탄신일", "10-05":"추석", "10-06":"추석", "10-07":"추석", "10-08":"대체공휴일"});
+            } else if (year === 2026) {
+                Object.assign(holidays, {"02-16":"설날", "02-17":"설날", "02-18":"설날", "05-24":"석가탄신일", "05-25":"대체공휴일", "09-24":"추석", "09-25":"추석", "09-26":"추석", "09-28":"대체공휴일"});
+            } else if (year === 2027) {
+                Object.assign(holidays, {"02-06":"설날", "02-07":"설날", "02-08":"설날", "02-09":"대체공휴일", "05-13":"석가탄신일", "09-14":"추석", "09-15":"추석", "09-16":"추석"});
+            }
+
+            const targetSubstituteHolidays = ["01-01", "03-01", "05-05", "08-15", "10-01", "10-03", "10-09", "12-25"];
+            targetSubstituteHolidays.forEach(md => {
+                const [m, d] = md.split("-").map(Number);
+                const holidayDate = new Date(year, m - 1, d);
+                const day = holidayDate.getDay();
+
+                if (day === 0 || day === 6) {
+                    let subDate = new Date(year, m - 1, d);
+                    while (true) {
+                        subDate.setDate(subDate.getDate() + 1);
+                        const subMd = `${String(subDate.getMonth() + 1).padStart(2, '0')}-${String(subDate.getDate()).padStart(2, '0')}`;
+                        const subDay = subDate.getDay();
+                        if (subDay !== 0 && subDay !== 6 && !holidays[subMd]) {
+                            holidays[subMd] = "대체공휴일";
+                            break;
+                        }
+                    }
+                }
+            });
+            return holidays;
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            document.getElementById('month-display').innerText = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            dayLabels.forEach(day => {
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'day-label';
+                labelDiv.innerText = day;
+                grid.appendChild(labelDiv);
+            });
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+            const holidays = getSolarHolidays(year);
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-cell empty';
+                grid.appendChild(emptyCell);
+            }
+
+            const today = new Date();
+            for (let date = 1; date <= lastDateOfMonth; date++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                
+                const currentCellDate = new Date(year, month, date);
+                const dayOfWeek = currentCellDate.getDay();
+
+                if (dayOfWeek === 0) cell.classList.add('sunday');
+                if (dayOfWeek === 6) cell.classList.add('saturday');
+
+                if (year === today.getFullYear() && month === today.getMonth() && date === today.getDate()) {
+                    cell.classList.add('today');
+                }
+
+                const monthStr = String(month + 1).padStart(2, '0');
+                const dateStr = String(date).padStart(2, '0');
+                const holidayKey = `${monthStr}-${dateStr}`;
+                const fullDateStr = `${year}-${monthStr}-${dateStr}`;
+                
+                const cellTop = document.createElement('div');
+                cellTop.className = 'cell-top';
+
+                const dateNumDiv = document.createElement('div');
+                dateNumDiv.className = 'date-num';
+                dateNumDiv.innerText = date;
+                cellTop.appendChild(dateNumDiv);
+
+                if (holidays[holidayKey]) {
+                    cell.classList.add('holiday');
+                    const holidayLabel = document.createElement('div');
+                    holidayLabel.className = 'holiday-label';
+                    holidayLabel.innerText = holidays[holidayKey];
+                    cellTop.appendChild(holidayLabel);
+                }
+                cell.appendChild(cellTop);
+
+                const schedContainer = document.createElement('div');
+                schedContainer.className = 'schedule-container';
+                
+                if (schedules[fullDateStr]) {
+                    const badge = document.createElement('div');
+                    badge.className = 'party-badge';
+                    badge.innerText = `[${schedules[fullDateStr].party}] ${schedules[fullDateStr].boss}`;
+                    schedContainer.appendChild(badge);
+                }
+                cell.appendChild(schedContainer);
+
+                cell.addEventListener('click', () => openModal(fullDateStr));
+                grid.appendChild(cell);
+            }
+        }
+
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function openModal(dateStr) {
+            selectedDateStr = dateStr;
+            document.getElementById('modal-date-title').innerText = `${dateStr} 일정 설정`;
+            
+            if (schedules[dateStr]) {
+                document.getElementById('party-name').value = schedules[dateStr].party;
+                document.getElementById('boss-name').value = schedules[dateStr].boss;
+                document.getElementById('btn-delete').style.display = 'block';
+            } else {
+                document.getElementById('party-name').value = '';
+                document.getElementById('boss-name').value = '';
+                document.getElementById('btn-delete').style.display = 'none';
+            }
+
+            document.getElementById('schedule-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('schedule-modal').style.display = 'none';
+        }
+
+        function saveSchedule() {
+            const party = document.getElementById('party-name').value.trim();
+            const boss = document.getElementById('boss-name').value.trim();
+
+            if (!party || !boss) {
+                alert('파티명과 보스명을 모두 입력해주세요!');
+                return;
+            }
+
+            schedules[selectedDateStr] = { party, boss };
+            localStorage.setItem('maple-calendar-schedules', JSON.stringify(schedules));
+            
+            closeModal();
+            renderCalendar();
+        }
+
+        function deleteSchedule() {
+            if (confirm('이 날의 일정을 삭제하시겠습니까?')) {
+                delete schedules[selectedDateStr];
+                localStorage.setItem('maple-calendar-schedules', JSON.stringify(schedules));
+                closeModal();
+                renderCalendar();
+            }
+        }
+
+        window.onload = function() {
+            renderCalendar();
+        };
+    </script>
+</body>
+</html>
