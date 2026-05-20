@@ -4,20 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메이플 보스 파티 달력</title>
+    
     <style>
+        /* [Design Tokens] 전역 변수 설정 */
         :root {
             --bg-color: #1a1a24;
             --card-bg: #242432;
             --cell-bg: #2d2d3f;
             --text-color: #ffffff;
             --text-muted: #9999aa;
-            --accent-color: #ffb703;
+            --accent-color: #ffb703; 
             --border-color: #3f3f56;
             --today-bg: #3a3225;
             --schedule-bg: #4c3c9c;
             --holiday-color: #ff6b6b;
         }
 
+        /* [Base Styles] 기본 레이아웃 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             background-color: var(--bg-color);
@@ -34,6 +37,7 @@
             margin-bottom: 10px;
         }
 
+        /* [Header UI] 컨트롤러 */
         .calendar-header {
             display: flex;
             justify-content: space-between;
@@ -63,7 +67,7 @@
             color: var(--accent-color);
         }
 
-        /* 화면이 작아지거나 글자가 너무 길어지면 달력이 깨지지 않고 가로 스크롤이 생기도록 감싸는 컨테이너 */
+        /* [Responsive Wrapper] 가로 스크롤 보장 */
         .calendar-wrapper {
             width: 100%;
             max-width: 1200px;
@@ -71,20 +75,21 @@
             padding-bottom: 10px;
         }
 
+        /* [Grid System] 7열 달력 판넬 */
         .calendar-grid {
             display: grid;
-            /* [핵심] 7개 칸 모두 '가장 글자가 긴 칸'의 가로 너비에 맞춰 동일하게 확장됨 */
             grid-template-columns: repeat(7, max-content);
             gap: 6px;
             background-color: var(--card-bg);
             padding: 12px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            width: max-content; /* 내부 콘텐츠 크기에 맞게 그리드 전체 폭 설정 */
+            width: max-content; 
             margin: 0 auto;
-            grid-auto-rows: 120px; /* 세로 높이는 120px로 고정 */
+            grid-auto-rows: 140px; /* [수정] 여러 일정을 수용하기 위해 행 높이를 140px로 약간 확장 */
         }
 
+        /* [Day Labels] 요일 칸 */
         .day-label {
             text-align: center;
             font-weight: bold;
@@ -92,7 +97,7 @@
             line-height: 30px;
             color: var(--text-muted);
             border-bottom: 2px solid var(--border-color);
-            min-width: 130px; /* 기본 최소 가로폭 지정 */
+            min-width: 140px; /* [수정] 일정 가독성을 위해 최소 너비 확보 */
             padding: 0 10px;
             box-sizing: border-box;
         }
@@ -100,18 +105,19 @@
         .day-label:nth-child(7) { color: #5bc0be; }
         .day-label:nth-child(1) { color: var(--holiday-color); }
 
-        /* [핵심] 가로폭 고정을 풀고 내부 콘텐츠 크기에 맞추되 7개 칸이 완벽한 동등 배열을 유지 */
+        /* [Calendar Cells] 개별 날짜 카드 */
         .calendar-cell {
             background-color: var(--cell-bg);
             height: 100%;
             border-radius: 5px;
-            padding: 10px;
+            padding: 8px;
             box-sizing: border-box;
             cursor: pointer;
             border: 1px solid transparent;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
+            overflow: hidden; /* 영역 넘침 방지 */
         }
 
         .calendar-cell:hover {
@@ -133,8 +139,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            gap: 15px; /* 날짜와 공휴일 사이 간격 */
+            margin-bottom: 6px;
+            gap: 15px;
         }
 
         .date-num {
@@ -161,27 +167,38 @@
             white-space: nowrap;
         }
 
+        /* [Schedule UI] 다중 일정을 위한 컨테이너 스타일 수정 */
         .schedule-container {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
+            overflow-y: auto; /* [수정] 일정 개수가 너무 많아지면 셀 내부에서 스크롤바 작동 */
+            flex-grow: 1;
+            /* 스크롤바 숨기기 (디자인용) */
+            -ms-overflow-style: none;
+            scrollbar-width: none; 
+        }
+        .schedule-container::-webkit-scrollbar {
+            display: none;
         }
 
-        /* [핵심] 글자가 길어져도 아래로 떨어지지 않고 가로로 쭉 배치되게 설정 */
+        /* 등록된 보스 일정 뱃지 */
         .party-badge {
             background-color: var(--schedule-bg);
-            font-size: 0.75rem;
-            padding: 5px 8px;
+            font-size: 0.7rem;
+            padding: 3px 6px;
             border-radius: 3px;
-            /* 가로 고정 및 줄바꿈 금지 */
             white-space: nowrap; 
             border-left: 3px solid var(--accent-color);
             width: max-content;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* 모달 스타일 */
+        /* [Modal UI Styling] 모달 팝업창 */
         .modal {
-            display: none;
+            display: none; 
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6);
@@ -195,7 +212,7 @@
             padding: 25px;
             border-radius: 10px;
             width: 90%;
-            max-width: 400px;
+            max-width: 440px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
@@ -204,10 +221,11 @@
             color: var(--accent-color);
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .form-group label {
@@ -217,7 +235,8 @@
             color: var(--text-muted);
         }
 
-        .form-group input {
+        .form-group input, 
+        .form-group select {
             width: 100%;
             padding: 8px;
             background-color: var(--cell-bg);
@@ -225,6 +244,65 @@
             color: white;
             border-radius: 5px;
             box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+        .form-group select option {
+            background-color: var(--card-bg);
+            color: white;
+        }
+
+        .form-group select optgroup {
+            background-color: var(--bg-color);
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* [새로운 UI 스택] 모달 내부에 현재 저장된 일정 목록을 보여주는 섹션 */
+        .modal-schedule-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            border-radius: 5px;
+            padding: 8px;
+            margin-top: 15px;
+        }
+
+        .list-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--cell-bg);
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .schedule-item:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 일정 개별 삭제 X 버튼 */
+        .btn-item-delete {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 0 4px;
+        }
+        .btn-item-delete:hover {
+            color: #ff4747;
         }
 
         .modal-buttons {
@@ -232,6 +310,8 @@
             justify-content: flex-end;
             gap: 10px;
             margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
         }
 
         .modal-buttons button {
@@ -243,7 +323,6 @@
         }
 
         .btn-save { background-color: var(--accent-color); color: #000; }
-        .btn-delete { background-color: #ff6b6b; color: #fff; }
         .btn-close { background-color: #6c757d; color: #fff; }
     </style>
 </head>
@@ -257,15 +336,13 @@
         <button onclick="changeMonth(1)">다음 달 ▶</button>
     </div>
 
-    <!-- 가로 스크롤을 지원하는 래퍼 -->
     <div class="calendar-wrapper">
         <div class="calendar-grid" id="calendar-grid"></div>
     </div>
 
-    <!-- 모달창 -->
     <div class="modal" id="schedule-modal">
         <div class="modal-content">
-            <h3 id="modal-date-title">일정 설정</h3>
+            <h3 id="modal-date-title">일정 추가</h3>
             
             <div class="form-group">
                 <label for="party-name">파티명 / 캐릭터명</label>
@@ -273,25 +350,80 @@
             </div>
 
             <div class="form-group">
-                <label for="boss-name">목표 보스</label>
-                <input type="text" id="boss-name" placeholder="예: 하드 루시드, 카오스 벨룸">
+                <label for="boss-name">목표 보스 선택</label>
+                <select id="boss-name">
+                    <option value="" disabled selected hidden>보스를 선택하세요</option>
+                    
+                    <optgroup label="최상위 레이드 (그란디스)">
+                        <option value="익스트림 세렌">익스트림 세렌</option>
+                        <option value="하드 세렌">하드 세렌</option>
+                        <option value="노멀 세렌">노멀 세렌</option>
+                        <option value="익스트림 칼로스">익스트림 칼로스</option>
+                        <option value="카오스 칼로스">카오스 칼로스</option>
+                        <option value="노멀 칼로스">노멀 칼로스</option>
+                        <option value="이지 칼로스">이지 칼로스</option>
+                        <option value="익스트림 카링">익스트림 카링</option>
+                        <option value="하드 카링">하드 카링</option>
+                        <option value="노멀 카링">노멀 카링</option>
+                        <option value="이지 카링">이지 카링</option>
+                    </optgroup>
+
+                    <optgroup label="주요 주간/월간 보스">
+                        <option value="하드 검은 마법사">하드 검은 마법사</option>
+                        <option value="하드 진 힐라">하드 진 힐라</option>
+                        <option value="노멀 진 힐라">노멀 진 힐라</option>
+                        <option value="하드 듄켈">하드 듄켈</option>
+                        <option value="노멀 듄켈">노멀 듄켈</option>
+                        <option value="하드 스우">하드 스우</option>
+                        <option value="노멀 스우">노멀 스우</option>
+                        <option value="하드 데미안">하드 데미안</option>
+                        <option value="노멀 데미안">노멀 데미안</option>
+                        <option value="하드 루시드">하드 루시드</option>
+                        <option value="노멀 루시드">노멀 루시드</option>
+                        <option value="이지 루시드">이지 루시드</option>
+                        <option value="하드 윌">하드 윌</option>
+                        <option value="노멀 윌">노멀 윌</option>
+                        <option value="이지 윌">이지 윌</option>
+                    </optgroup>
+
+                    <optgroup label="중하위 주간 보스">
+                        <option value="카오스 가엔슬">카오스 가엔슬</option>
+                        <option value="노멀 가엔슬">노멀 가엔슬</option>
+                        <option value="카오스 파풀라투스">카오스 파풀라투스</option>
+                        <option value="카오스 벨룸">카오스 벨룸</option>
+                        <option value="카오스 반반">카오스 반반</option>
+                        <option value="카오스 블러디 퀸">카오스 블러디 퀸</option>
+                        <option value="카오스 피에르">카오스 피에르</option>
+                        <option value="하드 매그너스">하드 매그너스</option>
+                        <option value="카오스 자쿰">카오스 자쿰</option>
+                        <option value="카오스 핑크빈">카오스 핑크빈</option>
+                        <option value="시그너스">시그너스 (노멀/이지)</option>
+                    </optgroup>
+                </select>
             </div>
 
+            <div class="list-title">등록된 일정 리스트</div>
+            <div class="modal-schedule-list" id="modal-schedule-list">
+                </div>
+
             <div class="modal-buttons">
-                <button class="btn-delete" id="btn-delete" onclick="deleteSchedule()">삭제</button>
-                <button class="btn-close" onclick="closeModal()">취소</button>
-                <button class="btn-save" onclick="saveSchedule()">저장</button>
+                <button class="btn-close" onclick="closeModal()">닫기</button>
+                <button class="btn-save" onclick="saveSchedule()">추장/등록</button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentDate = new Date();
-        let selectedDateStr = ""; 
+        // --- [State] 애플리케이션 전역 상태 데이터 ---
+        let currentDate = new Date(); 
+        let selectedDateStr = "";      
+        
+        // [구조 수정] 이제 각 날짜 키값은 객체가 아니라 객체들을 담은 '배열 []'을 가집니다.
         let schedules = JSON.parse(localStorage.getItem('maple-calendar-schedules')) || {};
 
         const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
+        // --- [Logic] 대한민국 공휴일 연산 및 대체공휴일 계산 함수 ---
         function getSolarHolidays(year) {
             const holidays = {
                 "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
@@ -312,10 +444,10 @@
                 const holidayDate = new Date(year, m - 1, d);
                 const day = holidayDate.getDay();
 
-                if (day === 0 || day === 6) {
+                if (day === 0 || day === 6) { 
                     let subDate = new Date(year, m - 1, d);
                     while (true) {
-                        subDate.setDate(subDate.getDate() + 1);
+                        subDate.setDate(subDate.getDate() + 1); 
                         const subMd = `${String(subDate.getMonth() + 1).padStart(2, '0')}-${String(subDate.getDate()).padStart(2, '0')}`;
                         const subDay = subDate.getDay();
                         if (subDay !== 0 && subDay !== 6 && !holidays[subMd]) {
@@ -328,6 +460,7 @@
             return holidays;
         }
 
+        // --- [View] 달력 화면 그리기(렌더링) 함수 ---
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -335,7 +468,7 @@
             document.getElementById('month-display').innerText = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
 
             const grid = document.getElementById('calendar-grid');
-            grid.innerHTML = '';
+            grid.innerHTML = ''; 
 
             dayLabels.forEach(day => {
                 const labelDiv = document.createElement('div');
@@ -344,9 +477,9 @@
                 grid.appendChild(labelDiv);
             });
 
-            const firstDayOfMonth = new Date(year, month, 1).getDay();
-            const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
-            const holidays = getSolarHolidays(year);
+            const firstDayOfMonth = new Date(year, month, 1).getDay(); 
+            const lastDateOfMonth = new Date(year, month + 1, 0).getDate(); 
+            const holidays = getSolarHolidays(year); 
 
             for (let i = 0; i < firstDayOfMonth; i++) {
                 const emptyCell = document.createElement('div');
@@ -394,11 +527,14 @@
                 const schedContainer = document.createElement('div');
                 schedContainer.className = 'schedule-container';
                 
-                if (schedules[fullDateStr]) {
-                    const badge = document.createElement('div');
-                    badge.className = 'party-badge';
-                    badge.innerText = `[${schedules[fullDateStr].party}] ${schedules[fullDateStr].boss}`;
-                    schedContainer.appendChild(badge);
+                // [수정된 렌더링 로직] 배열 안에 든 '모든' 일정을 순회하며 뱃지를 다 생성함
+                if (schedules[fullDateStr] && schedules[fullDateStr].length > 0) {
+                    schedules[fullDateStr].forEach(item => {
+                        const badge = document.createElement('div');
+                        badge.className = 'party-badge';
+                        badge.innerText = `[${item.party}] ${item.boss}`;
+                        schedContainer.appendChild(badge);
+                    });
                 }
                 cell.appendChild(schedContainer);
 
@@ -409,56 +545,105 @@
 
         function changeMonth(direction) {
             currentDate.setMonth(currentDate.getMonth() + direction);
-            renderCalendar();
+            renderCalendar(); 
         }
 
+        // --- [Modal & Data Control] 다중 일정 제어 로직 ---
+        
+        // 모달 내부에 현재 날짜에 쌓여있는 일정 리스트업 렌더링
+        function updateModalScheduleList() {
+            const listContainer = document.getElementById('modal-schedule-list');
+            listContainer.innerHTML = '';
+
+            const list = schedules[selectedDateStr] || [];
+
+            if (list.length === 0) {
+                listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:10px;">등록된 일정이 없습니다.</div>';
+                return;
+            }
+
+            // 배열 내 일정을 하나씩 돌며 개별 삭제가 가능한 목록 인터페이스 구현
+            list.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'schedule-item';
+                itemDiv.innerHTML = `
+                    <span><strong>[${item.party}]</strong> ${item.boss}</span>
+                    <button class="btn-item-delete" onclick="deleteScheduleItem(${index})">×</button>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        // 모달창 오픈
         function openModal(dateStr) {
             selectedDateStr = dateStr;
-            document.getElementById('modal-date-title').innerText = `${dateStr} 일정 설정`;
+            document.getElementById('modal-date-title').innerText = `${dateStr} 일정 관리`;
             
-            if (schedules[dateStr]) {
-                document.getElementById('party-name').value = schedules[dateStr].party;
-                document.getElementById('boss-name').value = schedules[dateStr].boss;
-                document.getElementById('btn-delete').style.display = 'block';
-            } else {
-                document.getElementById('party-name').value = '';
-                document.getElementById('boss-name').value = '';
-                document.getElementById('btn-delete').style.display = 'none';
-            }
+            // 입력창들 비우기 및 초기화
+            document.getElementById('party-name').value = '';
+            document.getElementById('boss-name').value = '';
+
+            // 쌓여있는 다중 일정 목록 로드
+            updateModalScheduleList();
 
             document.getElementById('schedule-modal').style.display = 'flex';
         }
 
+        // 모달창 닫기
         function closeModal() {
             document.getElementById('schedule-modal').style.display = 'none';
         }
 
+        // 일정 누적 추가 및 저장 (배열에 push)
         function saveSchedule() {
             const party = document.getElementById('party-name').value.trim();
-            const boss = document.getElementById('boss-name').value.trim();
+            const boss = document.getElementById('boss-name').value;
 
             if (!party || !boss) {
-                alert('파티명과 보스명을 모두 입력해주세요!');
+                alert('파티명과 보스명을 모두 입력/선택해주세요!');
                 return;
             }
 
-            schedules[selectedDateStr] = { party, boss };
+            // 해당 날짜에 데이터 배열이 없으면 새로 생성 후 push
+            if (!schedules[selectedDateStr]) {
+                schedules[selectedDateStr] = [];
+            }
+            
+            schedules[selectedDateStr].push({ party, boss });
             localStorage.setItem('maple-calendar-schedules', JSON.stringify(schedules));
             
-            closeModal();
+            // 입력창 비우고 모달 내부 목록 및 배경 달력 갱신 (열린 상태 유지하여 연속 등록 유도)
+            document.getElementById('party-name').value = '';
+            document.getElementById('boss-name').value = '';
+            updateModalScheduleList();
             renderCalendar();
         }
 
-        function deleteSchedule() {
-            if (confirm('이 날의 일정을 삭제하시겠습니까?')) {
-                delete schedules[selectedDateStr];
+        // 특정 순번(index)의 개별 일정 삭제 함수
+        function deleteScheduleItem(index) {
+            if (confirm('선택한 보스 일정을 삭제하시겠습니까?')) {
+                schedules[selectedDateStr].splice(index, 1); // 해당 인덱스 요소 제거
+
+                // 해당 날짜에 일정이 아예 없으면 키 자체를 지워 데이터 정리
+                if (schedules[selectedDateStr].length === 0) {
+                    delete schedules[selectedDateStr];
+                }
+
                 localStorage.setItem('maple-calendar-schedules', JSON.stringify(schedules));
-                closeModal();
+                updateModalScheduleList();
                 renderCalendar();
             }
         }
 
         window.onload = function() {
+            // [데이터 마이그레이션 예외처리] 만약 기존에 단일 객체형태{}로 저장된 구버전 데이터가 있다면 초기화하여 충돌 방지
+            for (let key in schedules) {
+                if (schedules[key] && !Array.isArray(schedules[key])) {
+                    schedules = {};
+                    localStorage.setItem('maple-calendar-schedules', JSON.stringify(schedules));
+                    break;
+                }
+            }
             renderCalendar();
         };
     </script>
